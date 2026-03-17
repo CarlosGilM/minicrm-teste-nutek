@@ -64,8 +64,29 @@ services:
     networks:
       - minicrm
 
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - minicrm
+    environment:
+      - N8N_HOST=n8n.localhost
+      - WEBHOOK_URL=http://n8n.localhost/
+      - GENERIC_TIMEZONE=America/Sao_Paulo
+      - N8N_SECURE_COOKIE=false
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`n8n.localhost`)"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+
 volumes:
   postgres_data:
+  n8n_data:
 
 networks:
   minicrm:
