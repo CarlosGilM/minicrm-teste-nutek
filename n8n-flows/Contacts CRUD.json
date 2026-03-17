@@ -1,0 +1,904 @@
+{
+  "name": "Contacts CRUD",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "contacts",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f54c7d0b-7c44-4d8c-8516-d4ca2c48efbd",
+      "name": "Webhook - Create Contact",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        80
+      ],
+      "webhookId": "create-contact-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const headers = $input.first().json.headers;\nconst body = $input.first().json.body;\nconst userId = headers['x-user-id'];\n\nif (!userId) {\n  return [{ json: { valid: false, error: 'Header x-user-id is required', statusCode: 400 } }];\n}\nif (!body || !body.name || String(body.name).trim() === '') {\n  return [{ json: { valid: false, error: 'Field name is required', statusCode: 400 } }];\n}\n\nreturn [{ json: { valid: true, userId, name: body.name, email: body.email || null, phone: body.phone || null } }];"
+      },
+      "id": "51e48291-a8d9-4859-ba04-1e96ebb4bb98",
+      "name": "Validate - Create",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        128,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-create-valid",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "looseTypeValidation": true
+        }
+      },
+      "id": "e527e20a-9c1f-47b0-b820-a81a00eaa304",
+      "name": "Is Valid? - Create",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        352,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: $json.error }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "9142e902-8ac1-424b-a7e0-07b0d013b452",
+      "name": "Error 400 - Create",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        592,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO \"Contact\" (id, name, email, phone, \"userId\", \"createdAt\", \"updatedAt\") VALUES (gen_random_uuid(), '{{ $json.name }}', {{ $json.email ? \"'\" + $json.email + \"'\" : \"NULL\" }}, {{ $json.phone ? \"'\" + $json.phone + \"'\" : \"NULL\" }}, '{{ $json.userId }}', NOW(), NOW()) RETURNING *",
+        "options": {}
+      },
+      "id": "5172c379-ac43-4f85-8e86-54bbf95fd15f",
+      "name": "DB Insert Contact",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        592,
+        80
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "cSFhf9OCYQfhtsj8",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "=contacts:{{ $('Validate - Create').first().json.userId }}"
+      },
+      "id": "ddc56e30-f57c-456e-bcb1-c29709fdbdf5",
+      "name": "Cache Invalidate - Create",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        832,
+        80
+      ],
+      "credentials": {
+        "redis": {
+          "id": "xlA4L3RS0XjZld8P",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($('DB Insert Contact').first().json) }}",
+        "options": {
+          "responseCode": 201
+        }
+      },
+      "id": "b2875e23-de8f-420e-904f-e53d11d3b700",
+      "name": "Response 201",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1072,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "path": "contacts",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a0841cd5-11fd-4a0b-8b4a-9ca0fbe18a83",
+      "name": "Webhook - List Contacts",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        640
+      ],
+      "webhookId": "list-contacts-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const headers = $input.first().json.headers;\nconst userId = headers['x-user-id'];\n\nif (!userId) {\n  return [{ json: { valid: false, error: 'Header x-user-id is required', statusCode: 400 } }];\n}\n\nreturn [{ json: { valid: true, userId } }];"
+      },
+      "id": "8f7cf714-8e39-4b7e-8419-12e3cec4f64c",
+      "name": "Validate - List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        128,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-list-valid",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "looseTypeValidation": true
+        }
+      },
+      "id": "ec8e6c6f-4aa4-46a2-aee4-24907eec9666",
+      "name": "Is Valid? - List",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        352,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: $json.error }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "050045c8-ce72-425c-b480-89be7ff06479",
+      "name": "Error 400 - List",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        592,
+        832
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "key": "=contacts:{{ $json.userId }}",
+        "options": {}
+      },
+      "id": "d3dea365-b5bb-4962-8658-8dba2c6806ff",
+      "name": "Cache Get",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        592,
+        640
+      ],
+      "credentials": {
+        "redis": {
+          "id": "xlA4L3RS0XjZld8P",
+          "name": "Redis account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const userId = $('Validate - List').first().json.userId;\nconst redisResult = $input.first().json;\nlet cachedData = null;\n\ntry {\n  const val = redisResult?.result ?? redisResult?.value ?? null;\n  if (val && val !== '' && val !== 'nil') {\n    cachedData = JSON.parse(val);\n  }\n} catch (e) { cachedData = null; }\n\nif (cachedData) {\n  return [{ json: { cacheHit: true, contacts: cachedData, userId } }];\n}\nreturn [{ json: { cacheHit: false, userId } }];"
+      },
+      "id": "75c413e1-9252-4b14-b5a5-e8be109ce640",
+      "name": "Check Cache",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-cache-hit",
+              "leftValue": "={{ $json.cacheHit }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "looseTypeValidation": true
+        }
+      },
+      "id": "5eeb87a1-8558-4ee3-922b-7922adf42873",
+      "name": "Cache Hit?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.contacts) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "153116a0-4163-41b3-9eac-4ec78e78fa2f",
+      "name": "Response 200 Cached",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1312,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM \"Contact\" WHERE \"userId\" = '{{ $json.userId }}' ORDER BY \"createdAt\" DESC",
+        "options": {}
+      },
+      "id": "fa7d2bbd-fea4-45f6-b5ed-54f07db6fef4",
+      "name": "DB Select Contacts",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1312,
+        736
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "cSFhf9OCYQfhtsj8",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const userId = $('Validate - List').first().json.userId;\nconst contacts = $input.all().map(item => item.json);\nreturn [{ json: { userId, contacts, cacheValue: JSON.stringify(contacts) } }];"
+      },
+      "id": "27069953-94ea-47d5-a388-db2e13ea34bb",
+      "name": "Prepare & Set Cache",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=contacts:{{ $json.userId }}",
+        "value": "={{ $json.cacheValue }}",
+        "expire": true,
+        "ttl": 300
+      },
+      "id": "b56f9a0e-28a2-4eb6-9c04-5088d70625ed",
+      "name": "Cache Set",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1792,
+        736
+      ],
+      "credentials": {
+        "redis": {
+          "id": "xlA4L3RS0XjZld8P",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($('Prepare & Set Cache').first().json.contacts) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "1835b1b0-8caa-4544-948f-9c5839db5fe0",
+      "name": "Response 200 DB",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2032,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "DELETE",
+        "path": "contacts",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "78641279-d104-49d8-9159-8a308948d25a",
+      "name": "Webhook - Delete Contact",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        1232
+      ],
+      "webhookId": "delete-contact-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const headers = $input.first().json.headers;\nconst query = $input.first().json.query;\nconst userId = headers['x-user-id'];\nconst contactId = query?.id;\n\nif (!userId) {\n  return [{ json: { valid: false, error: 'Header x-user-id is required', statusCode: 400 } }];\n}\nif (!contactId) {\n  return [{ json: { valid: false, error: 'Query parameter id is required', statusCode: 400 } }];\n}\n\nreturn [{ json: { valid: true, userId, contactId } }];"
+      },
+      "id": "7b5bec73-c680-4bd2-974f-a13401035fc0",
+      "name": "Validate - Delete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        128,
+        1232
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-delete-valid",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "looseTypeValidation": true
+        }
+      },
+      "id": "1c67c543-6a16-4d27-8f53-d88976aca0c4",
+      "name": "Is Valid? - Delete",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        352,
+        1232
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: $json.error }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "5e186e7c-f1c5-4e3b-912d-7b0508464f01",
+      "name": "Error 400 - Delete",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        592,
+        1424
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM \"Contact\" WHERE id = '{{ $json.contactId }}' LIMIT 1",
+        "options": {}
+      },
+      "id": "c3496698-10f2-4bef-836e-2f2c18f55029",
+      "name": "DB Check Owner",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        592,
+        1232
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "cSFhf9OCYQfhtsj8",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const userId = $('Validate - Delete').first().json.userId;\nconst contactId = $('Validate - Delete').first().json.contactId;\nconst rows = $input.all().map(i => i.json);\n\nif (!rows || rows.length === 0 || !rows[0].id) {\n  return [{ json: { owned: false, error: 'Contact not found', statusCode: 404, userId, contactId } }];\n}\nif (rows[0].userId !== userId) {\n  return [{ json: { owned: false, error: 'Forbidden: contact belongs to another user', statusCode: 403, userId, contactId } }];\n}\n\nreturn [{ json: { owned: true, userId, contactId } }];"
+      },
+      "id": "0064f251-09f6-49db-a153-0795ec2a01b2",
+      "name": "Check Ownership",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        1232
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-is-owner",
+              "leftValue": "={{ $json.owned }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "looseTypeValidation": true
+        }
+      },
+      "id": "0f962eb7-8aa3-4234-890b-911f0c803b9d",
+      "name": "Is Owner?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        1232
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: $json.error }) }}",
+        "options": {
+          "responseCode": "={{ $json.statusCode }}"
+        }
+      },
+      "id": "6297948e-30a1-4b41-bf2e-ff6c8f53fca3",
+      "name": "Error 403/404",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1312,
+        1392
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM \"Contact\" WHERE id = '{{ $json.contactId }}' AND \"userId\" = '{{ $json.userId }}'",
+        "options": {}
+      },
+      "id": "e41ee795-d9cf-4a1e-b3b0-b0381f9dbfd5",
+      "name": "DB Delete Contact",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1312,
+        1232
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "cSFhf9OCYQfhtsj8",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "=contacts:{{ $('Validate - Delete').first().json.userId }}"
+      },
+      "id": "bcfc30a7-78fd-49c2-b49c-a8772559becc",
+      "name": "Cache Invalidate - Delete",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1552,
+        1232
+      ],
+      "credentials": {
+        "redis": {
+          "id": "xlA4L3RS0XjZld8P",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 204
+        }
+      },
+      "id": "46e206d8-61be-4ce0-b958-1f8159be5d2a",
+      "name": "Response 204",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1792,
+        1232
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Create Contact": {
+      "main": [
+        [
+          {
+            "node": "Validate - Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate - Create": {
+      "main": [
+        [
+          {
+            "node": "Is Valid? - Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid? - Create": {
+      "main": [
+        [
+          {
+            "node": "DB Insert Contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error 400 - Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB Insert Contact": {
+      "main": [
+        [
+          {
+            "node": "Cache Invalidate - Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cache Invalidate - Create": {
+      "main": [
+        [
+          {
+            "node": "Response 201",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - List Contacts": {
+      "main": [
+        [
+          {
+            "node": "Validate - List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate - List": {
+      "main": [
+        [
+          {
+            "node": "Is Valid? - List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid? - List": {
+      "main": [
+        [
+          {
+            "node": "Cache Get",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error 400 - List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cache Get": {
+      "main": [
+        [
+          {
+            "node": "Check Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Cache": {
+      "main": [
+        [
+          {
+            "node": "Cache Hit?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cache Hit?": {
+      "main": [
+        [
+          {
+            "node": "Response 200 Cached",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DB Select Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB Select Contacts": {
+      "main": [
+        [
+          {
+            "node": "Prepare & Set Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare & Set Cache": {
+      "main": [
+        [
+          {
+            "node": "Cache Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cache Set": {
+      "main": [
+        [
+          {
+            "node": "Response 200 DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Delete Contact": {
+      "main": [
+        [
+          {
+            "node": "Validate - Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate - Delete": {
+      "main": [
+        [
+          {
+            "node": "Is Valid? - Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid? - Delete": {
+      "main": [
+        [
+          {
+            "node": "DB Check Owner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error 400 - Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB Check Owner": {
+      "main": [
+        [
+          {
+            "node": "Check Ownership",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Ownership": {
+      "main": [
+        [
+          {
+            "node": "Is Owner?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Owner?": {
+      "main": [
+        [
+          {
+            "node": "DB Delete Contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error 403/404",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB Delete Contact": {
+      "main": [
+        [
+          {
+            "node": "Cache Invalidate - Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cache Invalidate - Delete": {
+      "main": [
+        [
+          {
+            "node": "Response 204",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9bcb4741-3d59-4ee4-818c-3c07bb795bfe",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9df271488b28c3c29084f6d88b88aadbdbac499aa7f7c9a6f15fd452f9caaaf5"
+  },
+  "id": "gZCmGyoIRKtMGCVT",
+  "tags": []
+}
