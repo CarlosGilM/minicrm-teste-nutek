@@ -1,0 +1,15 @@
+name = "minicrm-api-gateway"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[observability]
+enabled = true
+
+[vars]
+FRONTEND_URL = "http://localhost:5173"
+AUTH_SERVICE_URL = "http://127.0.0.1:8082"
+N8N_WEBHOOK_URL = "http://127.0.0.1:5678"
+
+# Production environment config for later deployment
+[env.production]
+vars = { FRONTEND_URL = "https://SEU-FRONTEND.pages.dev", AUTH_SERVICE_URL = "https://SEU-AUTH-SERVICE-URL", N8N_WEBHOOK_URL = "https://SEU-N8N-URL" }
