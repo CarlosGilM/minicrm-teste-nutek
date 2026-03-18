@@ -1,15 +1,21 @@
 name = "minicrm-api-gateway"
 main = "src/index.ts"
-compatibility_date = "2024-12-01"
-
-[observability]
-enabled = true
+workers_dev = true
+compatibility_date = "2025-01-01"
 
 [vars]
 FRONTEND_URL = "http://localhost:5173"
 AUTH_SERVICE_URL = "http://127.0.0.1:8082"
 N8N_WEBHOOK_URL = "http://127.0.0.1:5678"
 
-# Production environment config for later deployment
+[env.development]
+vars = { AUTH_SERVICE_URL = "http://127.0.0.1:8082", N8N_WEBHOOK_URL = "http://n8n.localhost/webhook", FRONTEND_URL = "http://localhost:5173" }
+
 [env.production]
-vars = { FRONTEND_URL = "https://SEU-FRONTEND.pages.dev", AUTH_SERVICE_URL = "https://SEU-AUTH-SERVICE-URL", N8N_WEBHOOK_URL = "https://SEU-N8N-URL" }
+name = "minicrm-api-gateway"
+route = "api.yourdomain.com/*"
+zone_id = "YOUR_PRODUCTION_ZONE_ID"
+vars = { FRONTEND_URL = "https://yourdomain.com", AUTH_SERVICE_URL = "https://auth.yourdomain.com", N8N_WEBHOOK_URL = "https://n8n.yourdomain.com/webhook" }
+
+[observability]
+enabled = true

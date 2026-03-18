@@ -4,7 +4,9 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+    "build": "wrangler build",
+    "type-check": "tsc --noEmit",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv"
   },
   "dependencies": {
     "hono": "^4.12.8",
@@ -12,7 +14,9 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260317.1",
+    "@types/node": "^22.10.2",
     "typescript": "^5.9.3",
-    "wrangler": "^4.4.0"
+    "wrangler": "^4.4.0",
+    "zod": "^3.23.8"
   }
 }
