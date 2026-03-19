@@ -24,10 +24,9 @@ Sistema simplificado de gestão de contatos com autenticação, painel web e aut
                                           │                               │
                              ┌────────────▼─────────────┐      ┌──────────▼───────────┐
                              │  n8n (Automações)        │      │  PostgreSQL + Redis  │
-                             │  Docker                  │      │ Docker / Railway     │
-                             Node.js + Express          │      └──────────────────────┘
-                             │  Docker / Railway        │
-                             └──────────────────────────┘
+                             │  Docker / Railway        │      │ Docker / Railway     │
+                             └──────────────────────────┘      └──────────────────────┘
+
 ```
 
 **Fluxo de uma requisição autenticada:**
