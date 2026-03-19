@@ -11,7 +11,7 @@ N8N_WEBHOOK_URL = "http://127.0.0.1:5678/webhook"
 
 [env.production]
 name = "minicrm-api-gateway"
-vars = { FRONTEND_URL = "https://YOUR_PAGES_URL.pages.dev", AUTH_SERVICE_URL = "https://YOUR_AUTH_SERVICE_URL", N8N_WEBHOOK_URL = "https://YOUR_N8N_URL/webhook" }
+vars = { FRONTEND_URL = "https://minicrm-teste-nutek.pages.dev", AUTH_SERVICE_URL = "https://minicrm-teste-nutek-production.up.railway.app", N8N_WEBHOOK_URL = "https://n8n-production-2160.up.railway.app/webhook" }
 
 [observability]
 enabled = true
