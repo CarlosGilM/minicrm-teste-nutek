@@ -20,17 +20,13 @@ Sistema simplificado de gestão de contatos com autenticação, painel web e aut
 │  Frontend (SPA)      │────▶│  API Gateway             │────▶│  Auth Service        │
 │  React + Vite        │     │  Cloudflare Worker (Hono)│      │  Node.js + Express   │
 │  Cloudflare Pages    │     │                          │      │  Docker / Railway    │
-└──────────────────────┘     └────────────┬─────────────┘      └──────────────────────┘
-                                          │
-                             ┌────────────▼─────────────┐
-                             │  n8n (Automações)
-                             Node.js + Express          │
+└──────────────────────┘     └────────────┬─────────────┘      └──────────┬───────────┘
+                                          │                               │
+                             ┌────────────▼─────────────┐      ┌──────────▼───────────┐
+                             │  n8n (Automações)        │      │  PostgreSQL + Redis  │
+                             │  Docker                  │      │ Docker / Railway     │
+                             Node.js + Express          │      └──────────────────────┘
                              │  Docker / Railway        │
-                             └────────────┬─────────────┘
-                                          │
-                             ┌────────────▼─────────────┐
-                             │  PostgreSQL + Redis      │
-                             │  Docker                  │
                              └──────────────────────────┘
 ```
 
