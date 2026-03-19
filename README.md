@@ -79,8 +79,8 @@ Sistema simplificado de gestão de contatos com autenticação, painel web e aut
 No ambiente local, o API Gateway roda via `wrangler dev` (não é deployado na Cloudflare). Isso permite que ele acesse os serviços backend rodando em `localhost` via Docker:
 
 ```
-Frontend (localhost:5173)
-      ↓
+Frontend (localhost:5173)       ──┐
+                                  │  via Docker Compose
 wrangler dev (localhost:8787)   ← Worker rodando localmente
       ↓
 auth-service (localhost:8082)   ──┐
@@ -136,6 +136,7 @@ Isso sobe:
 - **redis** na porta `6379` (com healthcheck)
 - **n8n** na porta `5678`
 - **traefik** nas portas `80` e `8080`
+- **frontend** na porta `5173` (React + Vite dev server)
 
 O auth-service aplica automaticamente o schema do banco via `prisma db push` na inicialização.
 
@@ -165,6 +166,7 @@ Server running on port 8082
 | Auth Service (Traefik) | http://auth.localhost |
 | n8n (interface web) | http://localhost:5678 ou http://n8n.localhost |
 | Traefik Dashboard | http://localhost:8080 |
+| Frontend | http://localhost:5173 |
 
 > **Nota:** Para os domínios `.localhost` funcionarem no navegador, seu sistema operacional já os resolve para `127.0.0.1` por padrão na maioria das configurações modernas.
 
@@ -174,17 +176,18 @@ Server running on port 8082
 
 1. Acesse o n8n em **http://localhost:5678**
 2. Crie uma conta de administrador na primeira vez
-3. Vá em **Settings → Credentials** e crie uma credencial do tipo **PostgreSQL** com os dados:
-   - Host: `postgres`
-   - Port: `5432`
-   - Database: `minicrm`
-   - User: `minicrm`
-   - Password: `minicrm123`
-4. Vá em **Workflows → Import from file** e importe o arquivo:
+3. Clique em **...** (novo workflow) → **Import from file** e importe o arquivo:
    ```
    n8n-flows/Contacts CRUD.json
    ```
-5. No workflow importado, atualize os nós PostgreSQL para usar a credencial criada no passo 3
+4. Clique em qualquer nó **PostgreSQL** do workflow → no campo **Credential to connect with** selecione **Create new credential** e preencha:
+   - Host: `postgres`
+   - Database: `minicrm`
+   - User: `minicrm`
+   - Password: `minicrm123`
+5. Clique em qualquer nó **Redis** do workflow → crie a credencial com:
+   - Host: `redis`
+   - Port: `6379`
 6. Ative o workflow (toggle no canto superior direito)
 
 Os seguintes webhooks estarão disponíveis após ativar:
@@ -196,14 +199,19 @@ Os seguintes webhooks estarão disponíveis após ativar:
 
 ### Passo 5 — Rodar o API Gateway localmente (wrangler dev)
 
-O `wrangler.toml` já tem as variáveis configuradas para apontar para os serviços locais:
+O `wrangler.toml` já tem as URLs configuradas para os serviços locais. O `JWT_SECRET`, por ser sensível, fica em um arquivo separado que **não vai pro git**:
 
-```toml
-[vars]
-AUTH_SERVICE_URL = "http://127.0.0.1:8082"
-N8N_WEBHOOK_URL  = "http://127.0.0.1:5678/webhook"
-FRONTEND_URL     = "http://localhost:5173"
+```bash
+cp api-gateway/.dev.vars.example api-gateway/.dev.vars
 ```
+Crie o arquivo `.dev.vars` com base no arquivo `.dev.vars.example`
+O conteúdo do `.dev.vars` deve ter o mesmo `JWT_SECRET` do `auth-service/.env`:
+
+```env
+JWT_SECRET=sua-chave-secreta-aqui-troque-em-producao
+```
+
+> **Importante:** O `.dev.vars` é lido apenas pelo `wrangler dev` (local). Em produção, o segredo é configurado via `wrangler secret put JWT_SECRET`, que o armazena encriptado na Cloudflare.
 
 Rode o Worker localmente:
 
@@ -215,31 +223,13 @@ npx wrangler dev
 
 O Gateway estará disponível em **http://localhost:8787**.
 
-> **Atenção:** O `JWT_SECRET` configurado no `wrangler.toml` (ou nas vars do Worker) deve ser exatamente o mesmo do `auth-service/.env`. Ambos usam HS256. Se os valores divergirem, o gateway vai rejeitar tokens emitidos pelo auth-service.
-
 ---
 
-### Passo 6 — Rodar o Frontend
+### Passo 6 — Frontend
 
-```bash
-cd frontend-web
-npm install
-```
+O frontend já sobe automaticamente junto com o `docker compose up -d` (Passo 3). Ele estará disponível em **http://localhost:5173** assim que o container inicializar.
 
-Crie o arquivo de variáveis de ambiente local apontando para o `wrangler dev`:
-
-```bash
-# frontend-web/.env.local
-VITE_API_URL=http://localhost:8787
-```
-
-Inicie o servidor de desenvolvimento:
-
-```bash
-npm run dev
-```
-
-O frontend estará disponível em **http://localhost:5173**.
+> **Nota:** Na primeira execução o container instala as dependências (`npm install`), o que pode levar alguns segundos a mais. Acompanhe com `docker compose logs -f frontend`.
 
 ---
 
@@ -282,14 +272,23 @@ docker compose down -v
 | `JWT_EXPIRES_IN` | Tempo de expiração do JWT | `15m` |
 | `REFRESH_TOKEN_TTL` | TTL do refresh token no Redis (segundos) | `604800` (7 dias) |
 
-### API Gateway (`api-gateway/wrangler.toml`)
+### API Gateway
+
+**`api-gateway/wrangler.toml`** — variáveis não-sensíveis:
 
 | Variável | Descrição |
 |----------|-----------|
 | `AUTH_SERVICE_URL` | URL base do Auth Service |
 | `N8N_WEBHOOK_URL` | URL base dos webhooks do n8n |
 | `FRONTEND_URL` | URL do frontend (usada no CORS) |
-| `JWT_SECRET` | Mesma chave usada no Auth Service |
+
+**`api-gateway/.dev.vars`** — segredos locais (não vai pro git, copie de `.dev.vars.example`):
+
+| Variável | Descrição |
+|----------|-----------|
+| `JWT_SECRET` | Mesma chave usada no Auth Service (HS256) |
+
+> Em produção, use `wrangler secret put JWT_SECRET` no lugar do `.dev.vars`.
 
 ### Frontend (`frontend-web/.env`)
 
@@ -317,6 +316,7 @@ minicrm-teste-nutek/
 │   ├── src/
 │   │   ├── middlewares/   # auth, cors, logging
 │   │   ├── routes/        # auth.routes, contacts.routes
+│   ├── .dev.vars.example  # Segredos locais (copiar para .dev.vars)
 │   │   └── utils/         # proxy, errors, validation
 │   └── wrangler.toml
 │
