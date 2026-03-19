@@ -16,7 +16,7 @@ export function useContacts() {
     setError('');
     try {
       const response = await api.get('/contacts');
-      setContacts(response.data);
+      setContacts(Array.isArray(response.data) ? response.data : []);
     } catch {
       setError('Erro ao carregar os contatos.');
     } finally {

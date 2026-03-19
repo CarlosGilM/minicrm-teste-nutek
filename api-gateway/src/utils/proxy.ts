@@ -108,12 +108,19 @@ export async function proxyRequest(
                 responseHeaders[key] = value;
             });
 
+            // Statuses that cannot have a body
+            const NULL_BODY_STATUSES = [101, 204, 205, 304];
+            if (NULL_BODY_STATUSES.includes(response.status)) {
+                return new Response(null, { status: response.status, headers: responseHeaders });
+            }
+
             // Get response body
             const contentType = response.headers.get('content-type');
             let finalBody: unknown;
 
             if (contentType?.includes('application/json')) {
-                finalBody = await response.json();
+                const text = await response.text();
+                finalBody = text ? JSON.parse(text) : null;
             } else {
                 finalBody = await response.text();
             }
